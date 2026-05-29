@@ -1,0 +1,4 @@
+packages:
+  - 'packages/*'
+  - 'apps/web'
+  # apps/desktop 在 M3 阶段启用（Electron 依赖较大，Windows 安装易 EBUSY）

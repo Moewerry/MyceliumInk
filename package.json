@@ -1,0 +1,21 @@
+{
+  "name": "mycelium-ink",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Mycelium Ink — 天气书法 × 音乐菌落生成艺术",
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm --filter @mycelium-ink/web dev",
+    "dev:desktop": "pnpm --filter @mycelium-ink/desktop dev",
+    "build": "pnpm -r build",
+    "build:web": "pnpm --filter @mycelium-ink/web build",
+    "build:core": "pnpm --filter @mycelium-ink/core build",
+    "preview": "pnpm --filter @mycelium-ink/web preview",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "eslint packages apps --ext .ts,.tsx"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@9.15.0"
+}

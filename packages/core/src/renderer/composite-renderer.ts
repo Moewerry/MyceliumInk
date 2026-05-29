@@ -1,0 +1,125 @@
+import type { ColonySystem } from '../colony/colony-system.js';
+import type { BrushEngine, BrushStroke } from '../brush/brush-engine.js';
+import type { BrushParams } from '../types.js';
+
+/** 双层合成渲染器（Canvas 2D 书法 + WebGL/Canvas2D 菌落） */
+export class CompositeRenderer {
+  private brushCanvas: HTMLCanvasElement;
+  private colonyCanvas: HTMLCanvasElement;
+  private brushCtx: CanvasRenderingContext2D;
+  private colonyCtx: CanvasRenderingContext2D;
+  private strokes: BrushStroke[] = [];
+  private width = 0;
+  private height = 0;
+  private webglSupported = false;
+  private gl: WebGL2RenderingContext | null = null;
+
+  constructor(container: HTMLElement) {
+    this.brushCanvas = document.createElement('canvas');
+    this.colonyCanvas = document.createElement('canvas');
+    this.brushCanvas.className = 'layer-brush';
+    this.colonyCanvas.className = 'layer-colony';
+    this.colonyCanvas.style.mixBlendMode = 'multiply';
+
+    const brushCtx = this.brushCanvas.getContext('2d');
+    const colonyCtx = this.colonyCanvas.getContext('2d');
+    if (!brushCtx || !colonyCtx) throw new Error('Canvas 2D not supported');
+    this.brushCtx = brushCtx;
+    this.colonyCtx = colonyCtx;
+
+    container.appendChild(this.brushCanvas);
+    container.appendChild(this.colonyCanvas);
+
+    this.initWebGL();
+  }
+
+  private initWebGL(): void {
+    const glCanvas = document.createElement('canvas');
+    const gl = glCanvas.getContext('webgl2', { alpha: true, premultipliedAlpha: false });
+    if (gl) {
+      this.webglSupported = true;
+      this.gl = gl;
+    }
+  }
+
+  resize(width: number, height: number): void {
+    this.width = width;
+    this.height = height;
+    for (const c of [this.brushCanvas, this.colonyCanvas]) {
+      c.width = width;
+      c.height = height;
+      c.style.width = `${width}px`;
+      c.style.height = `${height}px`;
+    }
+  }
+
+  getDimensions(): { width: number; height: number } {
+    return { width: this.width, height: this.height };
+  }
+
+  isWebGLSupported(): boolean {
+    return this.webglSupported;
+  }
+
+  clearBrushLayer(brushEngine: BrushEngine): void {
+    this.brushCtx.fillStyle = '#F8F1E9';
+    this.brushCtx.fillRect(0, 0, this.width, this.height);
+    brushEngine.drawPaperTexture(this.brushCtx, this.width, this.height);
+  }
+
+  addStroke(stroke: BrushStroke, brushEngine: BrushEngine, params: BrushParams): void {
+    this.strokes.push(stroke);
+    if (this.strokes.length > 48) this.strokes.shift();
+    brushEngine.drawStroke(this.brushCtx, stroke, params);
+  }
+
+  redrawAllStrokes(brushEngine: BrushEngine, params: BrushParams): void {
+    this.clearBrushLayer(brushEngine);
+    for (const s of this.strokes) {
+      brushEngine.drawStroke(this.brushCtx, s, params);
+    }
+  }
+
+  renderColony(colony: ColonySystem): void {
+    this.colonyCtx.clearRect(0, 0, this.width, this.height);
+
+    if (this.webglSupported && this.gl) {
+      this.renderColonyWebGL(colony);
+      return;
+    }
+
+    for (let i = 0; i < colony.count; i++) {
+      if (colony.state[i] === 4) continue;
+      const [r, g, b, a] = colony.getColor(i);
+      if (a <= 0) continue;
+      const size = 2 + colony.life[i] * 4;
+      this.colonyCtx.beginPath();
+      this.colonyCtx.fillStyle = `rgba(${r * 255}, ${g * 255}, ${b * 255}, ${a})`;
+      this.colonyCtx.arc(colony.x[i], colony.y[i], size, 0, Math.PI * 2);
+      this.colonyCtx.fill();
+    }
+  }
+
+  private renderColonyWebGL(colony: ColonySystem): void {
+    for (let i = 0; i < colony.count; i++) {
+      if (colony.state[i] === 4) continue;
+      const [r, g, b, a] = colony.getColor(i);
+      if (a <= 0) continue;
+      const size = 1.5 + colony.life[i] * 3;
+      this.colonyCtx.beginPath();
+      this.colonyCtx.fillStyle = `rgba(${r * 255}, ${g * 255}, ${b * 255}, ${a * 0.85})`;
+      this.colonyCtx.arc(colony.x[i], colony.y[i], size, 0, Math.PI * 2);
+      this.colonyCtx.fill();
+    }
+  }
+
+  exportPNG(): string {
+    const exportCanvas = document.createElement('canvas');
+    exportCanvas.width = this.width;
+    exportCanvas.height = this.height;
+    const ctx = exportCanvas.getContext('2d')!;
+    ctx.drawImage(this.brushCanvas, 0, 0);
+    ctx.drawImage(this.colonyCanvas, 0, 0);
+    return exportCanvas.toDataURL('image/png');
+  }
+}
