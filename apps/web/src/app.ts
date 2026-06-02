@@ -56,9 +56,11 @@ export class MyceliumApp {
         <main class="canvas-area">
           <div class="top-bar">
             <div class="logo">
-              <span class="logo-seal" aria-hidden="true"></span>
-              <span class="logo-icon" aria-hidden="true">⎈</span>
-              Mycelium Ink
+              <img class="logo-mark" src="/logo.png" alt="Mycelium Ink" />
+              <span class="logo-title">
+                Mycelium Ink
+                <img class="logo-seal" src="/seal-1.png" alt="" aria-hidden="true" />
+              </span>
             </div>
             <div class="top-actions">
               <button id="btn-fullscreen">全屏</button>

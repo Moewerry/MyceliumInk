@@ -195,26 +195,30 @@ body {
   letter-spacing: 0.04em;
 }
 
-.logo-seal {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, #d4a574, #8b4513);
-  box-shadow: 0 0 0 1px rgba(139, 69, 19, 0.3);
-  flex-shrink: 0;
+.logo-title {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  padding-right: 14px;
 }
 
-.logo-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: 1px solid rgba(201, 169, 98, 0.4);
-  background: rgba(255, 255, 255, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  color: var(--moss);
+.logo-seal {
+  position: absolute;
+  top: -6px;
+  right: 0;
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  opacity: 0.85;
+  filter: drop-shadow(0 1px 1px rgba(26, 24, 20, 0.18));
+}
+
+.logo-mark {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  flex-shrink: 0;
+  filter: drop-shadow(0 1px 2px rgba(26, 24, 20, 0.18));
 }
 
 .top-actions {

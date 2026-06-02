@@ -11,3 +11,5 @@ coverage/
 release/
 out/
 *.tsbuildinfo
+
+h.html
