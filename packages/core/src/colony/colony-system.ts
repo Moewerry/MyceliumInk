@@ -88,7 +88,11 @@ export class ColonySystem {
 
   update(dt: number, audio: AudioFeatures, width: number, height: number): void {
     const energy = audio.bass * 0.5 + audio.mid * 0.3 + audio.treble * 0.2;
-    const spawnChance = energy * audio.volume * 0.02 * this.growthRate;
+    // 无音频时保留微弱呼吸式基线活动（约 15% 能量），避免完全休眠
+    const ambient = 0.15;
+    const effectiveEnergy = Math.max(energy, ambient * (1 - audio.volume));
+    const spawnChance =
+      effectiveEnergy * Math.max(audio.volume, ambient) * 0.08 * this.growthRate;
 
     if (Math.random() < spawnChance && this.activeCount < this.count * 0.9) {
       this.seedParticles(1, width, height);
@@ -112,8 +116,8 @@ export class ColonySystem {
         }
       }
 
-      ax += (Math.random() - 0.5) * energy * 2;
-      ay += (Math.random() - 0.5) * energy * 2 - 0.1;
+      ax += (Math.random() - 0.5) * effectiveEnergy * 2;
+      ay += (Math.random() - 0.5) * effectiveEnergy * 2 - 0.05 * effectiveEnergy;
 
       this.vx[i] = (this.vx[i] + ax * dt) * 0.98;
       this.vy[i] = (this.vy[i] + ay * dt) * 0.98;
@@ -125,7 +129,7 @@ export class ColonySystem {
       this.x[i] = clamp(this.x[i], 0, width);
       this.y[i] = clamp(this.y[i], 0, height);
 
-      this.transitionFSM(i, dt, energy);
+      this.transitionFSM(i, dt, effectiveEnergy);
     }
   }
 
@@ -172,7 +176,7 @@ export class ColonySystem {
     else if (s === ColonyState.GROWING) rgb = t.growing;
     else if (s === ColonyState.MATURE) rgb = t.mature;
     else rgb = [0.3, 0.25, 0.2];
-    const alpha = s === ColonyState.DUST ? 0 : this.life[i] * 0.7;
+    const alpha = s === ColonyState.DUST ? 0 : clamp(this.life[i] * 0.85 + 0.15, 0.15, 1);
     return [rgb[0], rgb[1], rgb[2], alpha];
   }
 

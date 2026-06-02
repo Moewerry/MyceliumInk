@@ -19,7 +19,7 @@ export class CompositeRenderer {
     this.colonyCanvas = document.createElement('canvas');
     this.brushCanvas.className = 'layer-brush';
     this.colonyCanvas.className = 'layer-colony';
-    this.colonyCanvas.style.mixBlendMode = 'multiply';
+    this.colonyCanvas.style.mixBlendMode = 'normal';
 
     const brushCtx = this.brushCanvas.getContext('2d');
     const colonyCtx = this.colonyCanvas.getContext('2d');
@@ -43,8 +43,8 @@ export class CompositeRenderer {
   }
 
   resize(width: number, height: number): void {
-    this.width = width;
-    this.height = height;
+    this.width = Math.max(1, Math.round(width));
+    this.height = Math.max(1, Math.round(height));
     for (const c of [this.brushCanvas, this.colonyCanvas]) {
       c.width = width;
       c.height = height;
@@ -62,18 +62,21 @@ export class CompositeRenderer {
   }
 
   clearBrushLayer(brushEngine: BrushEngine): void {
+    if (this.width < 1 || this.height < 1) return;
     this.brushCtx.fillStyle = '#F8F1E9';
     this.brushCtx.fillRect(0, 0, this.width, this.height);
     brushEngine.drawPaperTexture(this.brushCtx, this.width, this.height);
   }
 
   addStroke(stroke: BrushStroke, brushEngine: BrushEngine, params: BrushParams): void {
+    if (this.width < 1 || this.height < 1) return;
     this.strokes.push(stroke);
     if (this.strokes.length > 48) this.strokes.shift();
     brushEngine.drawStroke(this.brushCtx, stroke, params);
   }
 
   redrawAllStrokes(brushEngine: BrushEngine, params: BrushParams): void {
+    if (this.width < 1 || this.height < 1) return;
     this.clearBrushLayer(brushEngine);
     for (const s of this.strokes) {
       brushEngine.drawStroke(this.brushCtx, s, params);
@@ -92,7 +95,7 @@ export class CompositeRenderer {
       if (colony.state[i] === 4) continue;
       const [r, g, b, a] = colony.getColor(i);
       if (a <= 0) continue;
-      const size = 2 + colony.life[i] * 4;
+      const size = 3 + colony.life[i] * 6;
       this.colonyCtx.beginPath();
       this.colonyCtx.fillStyle = `rgba(${r * 255}, ${g * 255}, ${b * 255}, ${a})`;
       this.colonyCtx.arc(colony.x[i], colony.y[i], size, 0, Math.PI * 2);
@@ -105,9 +108,9 @@ export class CompositeRenderer {
       if (colony.state[i] === 4) continue;
       const [r, g, b, a] = colony.getColor(i);
       if (a <= 0) continue;
-      const size = 1.5 + colony.life[i] * 3;
+      const size = 3 + colony.life[i] * 5;
       this.colonyCtx.beginPath();
-      this.colonyCtx.fillStyle = `rgba(${r * 255}, ${g * 255}, ${b * 255}, ${a * 0.85})`;
+      this.colonyCtx.fillStyle = `rgba(${r * 255}, ${g * 255}, ${b * 255}, ${a})`;
       this.colonyCtx.arc(colony.x[i], colony.y[i], size, 0, Math.PI * 2);
       this.colonyCtx.fill();
     }

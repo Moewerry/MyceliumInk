@@ -72,12 +72,3 @@ pnpm build
 | 音频 | Web Audio API |
 | 桌面 | Electron 33+ |
 
-## 文档
-
-- [技术方案设计 (TDD)](docs/技术方案设计文档%20(TDD)%20v1.0.md)
-- [UX 设计规范](docs/UX%20设计规范文档%20v1.0.md)
-- [开发计划](docs/Mycelium%20Ink%20项目任务拆分与开发计划%20v1.0.md)
-
-## 许可证
-
-Private — 实验项目

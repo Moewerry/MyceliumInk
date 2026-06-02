@@ -117,13 +117,15 @@ export class BrushEngine {
 
   /** 绘制宣纸纹理 */
   drawPaperTexture(ctx: CanvasRenderingContext2D, width: number, height: number): void {
-    const imageData = ctx.createImageData(width, height);
+    const w = Math.max(1, Math.round(width));
+    const h = Math.max(1, Math.round(height));
+    const imageData = ctx.createImageData(w, h);
     const data = imageData.data;
-    for (let y = 0; y < height; y += 2) {
-      for (let x = 0; x < width; x += 2) {
+    for (let y = 0; y < h; y += 2) {
+      for (let x = 0; x < w; x += 2) {
         const n = this.noise.noise2D(x * 0.008, y * 0.008);
         const v = 248 + Math.floor(n * 8);
-        const i = (y * width + x) * 4;
+        const i = (y * w + x) * 4;
         data[i] = v;
         data[i + 1] = v - 7;
         data[i + 2] = v - 15;

@@ -12,6 +12,9 @@ export interface ControlPanelCallbacks {
   onRefreshWeather: () => void;
   onVirtualCity: (id: string) => void;
   onMicToggle: () => void;
+  onAudioFile: (file: File) => void;
+  onTabAudio: () => void;
+  onDemoAudio: () => void;
   onColonyTheme: (index: number) => void;
   onColonyDensity: (value: number) => void;
   onColonyGrowth: (value: number) => void;
@@ -102,7 +105,21 @@ export class ControlPanel {
             <div class="freq-bar"><div class="fill" id="bar-treble"></div></div>
           </div>
           <p style="text-align:center;font-size:11px;opacity:0.5;margin-top:8px">低 · 中 · 高</p>
-          <button class="btn-primary" id="btn-mic" style="margin-top:16px">开启麦克风</button>
+          <p style="font-size:11px;margin-top:12px;opacity:0.65;line-height:1.65">
+            <strong>戴耳机不影响捕获</strong>——捕获发生在浏览器/OS 层，与是否外放无关。<br/><br/>
+            <strong>A. 浏览器里放歌</strong>（YouTube、网页版网易云）<br/>
+            → 选「Chrome 标签页」→ 选<strong>正在放歌的标签页</strong> → 勾选「分享标签页音频」<br/><br/>
+            <strong>B. 电脑客户端放歌</strong>（网易云/QQ音乐/Spotify 桌面版）<br/>
+            → 选「整个屏幕」→ 勾选「<strong>分享系统音频</strong>」（仅 Win10/11 + Chrome）<br/><br/>
+            <strong>麦克风 + 耳机</strong>：无法收到音乐，请用 A/B 或上传文件。
+          </p>
+          <p style="font-size:11px;margin-top:8px;opacity:0.5" id="audio-source-label">当前：未连接</p>
+          <p style="font-size:10px;margin-top:6px;opacity:0.55;line-height:1.5;color:#8b6914" id="audio-status-hint"></p>
+          <input type="file" id="audio-file-input" accept="audio/*" hidden />
+          <button class="btn-primary" id="btn-audio-file" style="margin-top:8px">上传音乐文件</button>
+          <button class="btn-primary" id="btn-tab-audio">捕获标签页/系统音频</button>
+          <button class="btn-primary" id="btn-demo-audio" style="margin-top:8px">播放测试音（验证菌落）</button>
+          <button class="btn-primary" id="btn-mic">开启麦克风</button>
         </div>
         <div class="tab-panel" data-panel="colony">
           <p style="font-size:12px;margin-bottom:8px">配色主题</p>
@@ -181,6 +198,25 @@ export class ControlPanel {
 
     this.element.querySelector('#btn-mic')?.addEventListener('click', () => {
       this.callbacks.onMicToggle();
+    });
+
+    this.element.querySelector('#btn-audio-file')?.addEventListener('click', () => {
+      (this.element.querySelector('#audio-file-input') as HTMLInputElement)?.click();
+    });
+
+    this.element.querySelector('#audio-file-input')?.addEventListener('change', () => {
+      const input = this.element.querySelector('#audio-file-input') as HTMLInputElement;
+      const file = input.files?.[0];
+      if (file) this.callbacks.onAudioFile(file);
+      input.value = '';
+    });
+
+    this.element.querySelector('#btn-tab-audio')?.addEventListener('click', () => {
+      this.callbacks.onTabAudio();
+    });
+
+    this.element.querySelector('#btn-demo-audio')?.addEventListener('click', () => {
+      this.callbacks.onDemoAudio();
     });
 
     this.element.querySelector('#btn-rebirth')?.addEventListener('click', () => {
@@ -263,6 +299,16 @@ export class ControlPanel {
   setMicLabel(active: boolean): void {
     const btn = this.element.querySelector('#btn-mic');
     if (btn) btn.textContent = active ? '关闭麦克风' : '开启麦克风';
+  }
+
+  setAudioSourceLabel(label: string): void {
+    const el = this.element.querySelector('#audio-source-label');
+    if (el) el.textContent = `当前：${label}`;
+  }
+
+  setAudioStatusHint(hint: string): void {
+    const el = this.element.querySelector('#audio-status-hint');
+    if (el) el.textContent = hint;
   }
 
   updateWorkAge(age: string): void {
