@@ -40,6 +40,7 @@ export async function resumeAudioContext(): Promise<AudioContext> {
 abstract class AnalyserAudioSource implements AudioSource {
   abstract readonly mode: AudioInputMode;
   abstract readonly label: string;
+  abstract start(...args: unknown[]): Promise<void>;
 
   protected context: AudioContext | null = null;
   protected analyser: AnalyserNode | null = null;

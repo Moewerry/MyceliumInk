@@ -50,18 +50,30 @@ export class MyceliumApp {
           <button class="edge-btn" data-panel="audio" title="声音">♪</button>
           <button class="edge-btn" data-panel="colony" title="菌落">✿</button>
           <button class="edge-btn" data-panel="time" title="时间">◷</button>
+          <div class="edge-spacer"></div>
+          <button class="edge-btn" id="btn-theme" title="主题">☀</button>
         </nav>
         <main class="canvas-area">
           <div class="top-bar">
-            <div class="logo">Mycelium Ink</div>
+            <div class="logo">
+              <span class="logo-seal" aria-hidden="true"></span>
+              <span class="logo-icon" aria-hidden="true">⎈</span>
+              Mycelium Ink
+            </div>
             <div class="top-actions">
               <button id="btn-fullscreen">全屏</button>
               <button id="btn-export">导出 PNG</button>
             </div>
           </div>
-          <div class="canvas-wrapper" id="canvas-wrapper"></div>
+          <div class="canvas-wrapper" id="canvas-wrapper">
+            <div class="canvas-scenery" aria-hidden="true"></div>
+          </div>
           <p class="silent-hint" id="silent-hint">静默中，菌落进入休眠…</p>
-          <div class="status-bar" id="status-bar"></div>
+          <div class="status-bar" id="status-bar">
+            <span class="status-dot" id="status-dot"></span>
+            <span id="status-text">状态加载中…</span>
+            <div class="status-wave" id="status-wave" aria-hidden="true"></div>
+          </div>
         </main>
       </div>
     `;
@@ -99,9 +111,14 @@ export class MyceliumApp {
       onErosionSpeed: (s) => this.timeline.setSpeed(s),
       onWritePhrase: () => this.writeNextPhrase(),
       onClearCanvas: () => this.clearCanvas(),
+      onBackgroundPreset: (url) => this.setBackgroundFromPreset(url),
+      onBackgroundUpload: (file) => void this.setBackgroundFromUpload(file),
     });
 
     document.body.appendChild(this.panel.element);
+    this.panel.openPanel('weather');
+    this.initStatusWave();
+    this.initBackgroundFromStorage();
     this.bindUI(root);
     this.weatherService.loadFromCacheOnStart();
     this.resize();
@@ -118,11 +135,102 @@ export class MyceliumApp {
     // 不自动开麦克风，避免与标签页捕获冲突；用户自行选择音频源
   }
 
+  private setBackgroundCss(url: string): void {
+    document.documentElement.style.setProperty('--bg-main-url', `url("${url}")`);
+  }
+
+  private initBackgroundFromStorage(): void {
+    try {
+      const mode = localStorage.getItem('mi:bg:mode') ?? '';
+      const url = localStorage.getItem('mi:bg:url') ?? '';
+      if (url) {
+        this.setBackgroundCss(url);
+        if (mode === 'preset' && (url === '/bg-1.png' || url === '/bg-2.png')) {
+          this.panel.setSelectedBackground(url);
+        }
+      } else {
+        // 默认使用 bg-1 作为主背景（若存在）
+        this.setBackgroundFromPreset('/bg-1.png');
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  private setBackgroundFromPreset(url: string): void {
+    this.setBackgroundCss(url);
+    this.panel.setSelectedBackground(url);
+    try {
+      localStorage.setItem('mi:bg:mode', 'preset');
+      localStorage.setItem('mi:bg:url', url);
+    } catch {
+      // ignore
+    }
+  }
+
+  private async setBackgroundFromUpload(file: File): Promise<void> {
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error('read failed'));
+      reader.onload = () => resolve(String(reader.result ?? ''));
+      reader.readAsDataURL(file);
+    });
+    if (!dataUrl) return;
+    this.setBackgroundCss(dataUrl);
+    try {
+      localStorage.setItem('mi:bg:mode', 'upload');
+      localStorage.setItem('mi:bg:url', dataUrl);
+    } catch {
+      // 如果图片过大导致存储失败，就只在本次会话生效
+    }
+  }
+
+  private initStatusWave(): void {
+    const wave = document.querySelector('#status-wave');
+    if (!wave || wave.children.length) return;
+    for (let i = 0; i < 12; i++) {
+      const bar = document.createElement('span');
+      bar.style.height = '4px';
+      wave.appendChild(bar);
+    }
+  }
+
+  private updateStatusBar(
+    city: string,
+    temp: number,
+    volume: number,
+    active: boolean,
+    bass: number,
+    mid: number,
+    treble: number,
+  ): void {
+    const text = document.querySelector('#status-text');
+    if (text) {
+      const audioPart = active ? `音频输入活跃 · 音量 ${Math.round(volume * 100)}%` : '等待音频输入';
+      text.textContent = `状态: ${city} · ${Math.round(temp)}°C · ${audioPart}`;
+    }
+
+    const dot = document.querySelector('#status-dot');
+    if (dot) dot.classList.toggle('active', active && volume > 0.02);
+
+    const wave = document.querySelector('#status-wave');
+    if (wave) {
+      const bars = wave.querySelectorAll('span');
+      const bands = [bass, mid, treble];
+      bars.forEach((bar, i) => {
+        const band = bands[i % 3];
+        const h = active ? 4 + band * 12 + Math.sin(performance.now() * 0.008 + i) * 2 : 4;
+        (bar as HTMLElement).style.height = `${h}px`;
+      });
+    }
+  }
+
   private bindUI(root: HTMLElement): void {
-    root.querySelectorAll('.edge-btn').forEach((btn) => {
+    root.querySelectorAll('.edge-btn[data-panel]').forEach((btn) => {
       btn.addEventListener('click', () => {
-        this.panel.toggle();
-        root.querySelectorAll('.edge-btn').forEach((b) => b.classList.remove('active'));
+        const tab = (btn as HTMLElement).dataset.panel as 'weather' | 'audio' | 'colony' | 'time';
+        this.panel.openPanel(tab);
+        root.querySelectorAll('.edge-btn[data-panel]').forEach((b) => b.classList.remove('active'));
         btn.classList.add('active');
       });
     });
@@ -318,13 +426,13 @@ export class MyceliumApp {
     const dt = Math.min((now - this.lastTime) / 1000, 0.05);
     this.lastTime = now;
 
-    const params = this.brushInterpolator.update(now);
+    this.brushInterpolator.update(now);
     const analysis = this.audioActive ? this.audioSource?.getAnalysisData() ?? null : null;
     const audio = this.audioAnalyzer.analyze(analysis);
 
     if (!this.audioActive) {
       this.silentHint.style.display = 'block';
-      this.silentHint.textContent = '等待音频输入… 请允许麦克风，或上传音乐文件';
+      this.silentHint.textContent = '静默中，菌落进入休眠…';
     } else if (audio.volume < 0.02) {
       this.silentHint.style.display = 'block';
       const ctxState = this.audioSource?.getContextState?.() ?? '';
@@ -364,11 +472,15 @@ export class MyceliumApp {
     this.panel.updateWorkAge(this.timeline.getAgeFormatted());
 
     const status = this.weatherService.getState();
-    const bar = document.querySelector('#status-bar');
-    if (bar) {
-      const src = this.audioSource?.label ?? '无';
-      bar.textContent = `${status.city} · ${Math.round(status.data.temp)}°C · ${src} · ${Math.round(audio.volume * 100)}% · 峰值${peak}`;
-    }
+    this.updateStatusBar(
+      status.city,
+      status.data.temp,
+      audio.volume,
+      this.audioActive,
+      audio.bass,
+      audio.mid,
+      audio.treble,
+    );
 
     this.rafId = requestAnimationFrame((t) => this.loop(t));
   }

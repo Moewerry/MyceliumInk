@@ -70,11 +70,11 @@ export class CompositeRenderer {
     return this.webglSupported;
   }
 
-  clearBrushLayer(brushEngine: BrushEngine): void {
+  clearBrushLayer(_brushEngine: BrushEngine): void {
     if (this.width < 1 || this.height < 1) return;
-    this.brushCtx.fillStyle = '#F8F1E9';
+    this.brushCtx.clearRect(0, 0, this.width, this.height);
+    this.brushCtx.fillStyle = 'rgba(243, 235, 224, 0.42)';
     this.brushCtx.fillRect(0, 0, this.width, this.height);
-    brushEngine.drawPaperTexture(this.brushCtx, this.width, this.height);
   }
 
   /** 添加一整句（层积），超出上限时移除最早的一句并重绘 */

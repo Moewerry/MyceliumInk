@@ -22,15 +22,16 @@ export interface ControlPanelCallbacks {
   onErosionSpeed: (speed: number) => void;
   onWritePhrase: () => void;
   onClearCanvas: () => void;
+  onBackgroundPreset: (url: string) => void;
+  onBackgroundUpload: (file: File) => void;
 }
 
 export class ControlPanel {
   readonly element: HTMLElement;
-  private activeTab: TabId = 'weather';
   private open = false;
 
   constructor(
-    private weatherService: WeatherService,
+    weatherService: WeatherService,
     private callbacks: ControlPanelCallbacks,
   ) {
     this.element = document.createElement('aside');
@@ -45,13 +46,19 @@ export class ControlPanel {
     this.element.classList.toggle('open', this.open);
   }
 
-  isOpen(): boolean {
-    return this.open;
+  openPanel(tab: TabId): void {
+    this.open = true;
+    this.element.classList.add('open');
+    this.switchTab(tab);
   }
 
   close(): void {
     this.open = false;
     this.element.classList.remove('open');
+  }
+
+  isOpen(): boolean {
+    return this.open;
   }
 
   private template(): string {
@@ -90,11 +97,22 @@ export class ControlPanel {
           ${this.slider('humidity', '湿度', 0, 100, 60)}
           ${this.slider('windSpeed', '风速', 0, 30, 5)}
           ${this.slider('pressure', '气压', 980, 1040, 1013)}
-          <button class="btn-primary" id="btn-refresh-weather">刷新天气</button>
-          <button class="btn-primary" id="btn-write">书写新句</button>
-          <p style="font-size:11px;margin-top:8px;opacity:0.55" id="phrase-layer-hint">层积 0/12 句 · 最早的一句会在写满后自动淡出移除</p>
-          <button class="btn-primary" id="btn-clear-canvas" style="margin-top:8px">清空画布</button>
-          <p style="font-size:11px;margin-top:12px;opacity:0.6">虚拟城市</p>
+          <div class="action-row">
+            <button class="btn-primary" id="btn-refresh-weather">
+              <span class="btn-icon" aria-hidden="true">↻</span>刷新天气
+            </button>
+            <button class="btn-primary" id="btn-write">
+              <span class="btn-icon" aria-hidden="true">✎</span>书写新句
+            </button>
+          </div>
+          <div class="phrase-progress">
+            <div class="phrase-progress-label" id="phrase-layer-hint">0/12 句</div>
+            <div class="phrase-dots" id="phrase-dots"></div>
+          </div>
+          <button class="btn-primary btn-danger" id="btn-clear-canvas" style="margin-top:8px">
+            <span class="btn-icon" aria-hidden="true">⌫</span>清空画布
+          </button>
+          <p class="section-label">虚拟城市</p>
           <div class="city-grid">${cities}</div>
         </div>
         <div class="tab-panel" data-panel="audio">
@@ -138,6 +156,19 @@ export class ControlPanel {
             <button class="city-card erosion-speed" data-speed="10">10×</button>
             <button class="city-card erosion-speed" data-speed="100">100×</button>
           </div>
+          <p class="section-label">背景</p>
+          <div class="bg-grid">
+            <button class="bg-card" data-bg="/bg-1.png" style="background-image:url(/bg-1.png)">
+              <span class="label">山水 1</span>
+            </button>
+            <button class="bg-card" data-bg="/bg-2.png" style="background-image:url(/bg-2.png)">
+              <span class="label">山水 2</span>
+            </button>
+          </div>
+          <input type="file" id="bg-file-input" accept="image/*" hidden />
+          <button class="btn-primary" id="btn-bg-upload" style="margin-top:10px">
+            <span class="btn-icon" aria-hidden="true">⤒</span>上传背景图
+          </button>
         </div>
       </div>
     `;
@@ -234,7 +265,9 @@ export class ControlPanel {
 
     this.element.querySelectorAll('.city-card[data-city]').forEach((btn) => {
       btn.addEventListener('click', () => {
-        this.callbacks.onVirtualCity((btn as HTMLElement).dataset.city!);
+        const id = (btn as HTMLElement).dataset.city!;
+        this.setSelectedCity(id);
+        this.callbacks.onVirtualCity(id);
       });
     });
 
@@ -249,10 +282,28 @@ export class ControlPanel {
         this.callbacks.onErosionSpeed(parseFloat((btn as HTMLElement).dataset.speed!));
       });
     });
+
+    this.element.querySelectorAll('.bg-card[data-bg]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const url = (btn as HTMLElement).dataset.bg!;
+        this.setSelectedBackground(url);
+        this.callbacks.onBackgroundPreset(url);
+      });
+    });
+
+    this.element.querySelector('#btn-bg-upload')?.addEventListener('click', () => {
+      (this.element.querySelector('#bg-file-input') as HTMLInputElement | null)?.click();
+    });
+
+    this.element.querySelector('#bg-file-input')?.addEventListener('change', () => {
+      const input = this.element.querySelector('#bg-file-input') as HTMLInputElement;
+      const file = input.files?.[0];
+      if (file) this.callbacks.onBackgroundUpload(file);
+      input.value = '';
+    });
   }
 
   private switchTab(tab: TabId): void {
-    this.activeTab = tab;
     this.element.querySelectorAll('.tab-btn').forEach((b) => {
       b.classList.toggle('active', (b as HTMLElement).dataset.tab === tab);
     });
@@ -289,6 +340,15 @@ export class ControlPanel {
         set(`val-${f}`, Math.round(data[f]));
       }
     }
+
+    const matched = VIRTUAL_CITIES.find((c) => c.name === city);
+    if (matched) this.setSelectedCity(matched.id);
+  }
+
+  private setSelectedCity(id: string): void {
+    this.element.querySelectorAll('.city-card[data-city]').forEach((btn) => {
+      btn.classList.toggle('selected', (btn as HTMLElement).dataset.city === id);
+    });
   }
 
   updateAudioUI(volume: number, bass: number, mid: number, treble: number): void {
@@ -327,8 +387,22 @@ export class ControlPanel {
 
   updatePhraseLayerHint(count: number, max: number): void {
     const el = this.element.querySelector('#phrase-layer-hint');
-    if (el) {
-      el.textContent = `层积 ${count}/${max} 句 · 最早的一句会在写满后自动移除`;
+    if (el) el.textContent = `${count}/${max} 句`;
+    const dots = this.element.querySelector('#phrase-dots');
+    if (dots) {
+      dots.innerHTML = Array.from({ length: max }, (_, i) =>
+        `<span class="phrase-dot${i < count ? ' filled' : ''}"></span>`,
+      ).join('');
     }
+  }
+
+  setSelectedBackground(url: string): void {
+    this.applySelectedBackground(url);
+  }
+
+  private applySelectedBackground(url: string): void {
+    this.element.querySelectorAll('.bg-card[data-bg]').forEach((btn) => {
+      btn.classList.toggle('selected', (btn as HTMLElement).dataset.bg === url);
+    });
   }
 }
