@@ -45,38 +45,62 @@ export class MyceliumApp {
   mount(root: HTMLElement): void {
     root.innerHTML = `
       <div class="app-layout">
-        <nav class="edge-bar">
-          <button class="edge-btn active" data-panel="weather" title="天气">☁</button>
-          <button class="edge-btn" data-panel="audio" title="声音">♪</button>
-          <button class="edge-btn" data-panel="colony" title="菌落">✿</button>
-          <button class="edge-btn" data-panel="time" title="时间">◷</button>
-          <div class="edge-spacer"></div>
-          <button class="edge-btn" id="btn-theme" title="主题">☀</button>
-        </nav>
-        <main class="canvas-area">
-          <div class="top-bar">
-            <div class="logo">
-              <img class="logo-mark" src="/logo.png" alt="Mycelium Ink" />
-              <span class="logo-title">
-                Mycelium Ink
-                <img class="logo-seal" src="/seal-1.png" alt="" aria-hidden="true" />
-              </span>
+        <header class="top-bar">
+          <div class="logo">
+            <img class="logo-mark" src="/logo.png" alt="Mycelium Ink" />
+            <span class="logo-title">
+              Mycelium Ink
+              <img class="logo-seal" src="/seal-1.png" alt="" aria-hidden="true" />
+            </span>
+          </div>
+          <div class="top-actions">
+            <button id="btn-fullscreen">全屏</button>
+            <button id="btn-export">导出 PNG</button>
+          </div>
+        </header>
+
+        <main class="content-grid">
+          <aside class="tool-rail" aria-label="工具">
+            <button class="rail-btn active" data-panel="weather" title="天气">
+              <span class="rail-icon" aria-hidden="true">☁</span>
+              <span class="rail-label">天气</span>
+            </button>
+            <button class="rail-btn" data-panel="audio" title="声音">
+              <span class="rail-icon" aria-hidden="true">♪</span>
+              <span class="rail-label">声音</span>
+            </button>
+            <button class="rail-btn" data-panel="colony" title="菌落">
+              <span class="rail-icon" aria-hidden="true">✿</span>
+              <span class="rail-label">菌落</span>
+            </button>
+            <button class="rail-btn" data-panel="time" title="时间">
+              <span class="rail-icon" aria-hidden="true">◷</span>
+              <span class="rail-label">时间</span>
+            </button>
+            <div class="rail-spacer"></div>
+            <button class="rail-btn" id="btn-theme" title="主题">
+              <span class="rail-icon" aria-hidden="true">☀</span>
+              <span class="rail-label">主题</span>
+            </button>
+          </aside>
+
+          <section class="canvas-area">
+            <div class="canvas-frame">
+              <div class="canvas-wrapper" id="canvas-wrapper">
+                <div class="canvas-scenery" aria-hidden="true"></div>
+              </div>
             </div>
-            <div class="top-actions">
-              <button id="btn-fullscreen">全屏</button>
-              <button id="btn-export">导出 PNG</button>
-            </div>
-          </div>
-          <div class="canvas-wrapper" id="canvas-wrapper">
-            <div class="canvas-scenery" aria-hidden="true"></div>
-          </div>
-          <p class="silent-hint" id="silent-hint">静默中，菌落进入休眠…</p>
-          <div class="status-bar" id="status-bar">
-            <span class="status-dot" id="status-dot"></span>
-            <span id="status-text">状态加载中…</span>
-            <div class="status-wave" id="status-wave" aria-hidden="true"></div>
-          </div>
+            <p class="silent-hint" id="silent-hint">静默中，菌落进入休眠…</p>
+          </section>
+
+          <aside class="panel-slot" id="panel-slot"></aside>
         </main>
+
+        <footer class="status-bar" id="status-bar">
+          <span class="status-dot" id="status-dot"></span>
+          <span id="status-text">状态加载中…</span>
+          <div class="status-wave" id="status-wave" aria-hidden="true"></div>
+        </footer>
       </div>
     `;
 
@@ -117,7 +141,7 @@ export class MyceliumApp {
       onBackgroundUpload: (file) => void this.setBackgroundFromUpload(file),
     });
 
-    document.body.appendChild(this.panel.element);
+    root.querySelector('#panel-slot')?.appendChild(this.panel.element);
     this.panel.openPanel('weather');
     this.initStatusWave();
     this.initBackgroundFromStorage();
@@ -228,11 +252,11 @@ export class MyceliumApp {
   }
 
   private bindUI(root: HTMLElement): void {
-    root.querySelectorAll('.edge-btn[data-panel]').forEach((btn) => {
+    root.querySelectorAll('.rail-btn[data-panel]').forEach((btn) => {
       btn.addEventListener('click', () => {
         const tab = (btn as HTMLElement).dataset.panel as 'weather' | 'audio' | 'colony' | 'time';
         this.panel.openPanel(tab);
-        root.querySelectorAll('.edge-btn[data-panel]').forEach((b) => b.classList.remove('active'));
+        root.querySelectorAll('.rail-btn[data-panel]').forEach((b) => b.classList.remove('active'));
         btn.classList.add('active');
       });
     });

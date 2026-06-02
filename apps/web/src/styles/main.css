@@ -11,6 +11,8 @@
   --danger: #a84444;
   --panel-bg: rgba(252, 247, 240, 0.88);
   --bg-main-url: url("/bg-main.png");
+  --rail-width: 96px;
+  --panel-width: 320px;
   --ease-ink: cubic-bezier(0.23, 1, 0.32, 1);
   --font-ui: 'Inter', 'Noto Sans SC', system-ui, sans-serif;
   --font-serif: 'Noto Serif SC', 'EB Garamond', 'Songti SC', serif;
@@ -44,65 +46,126 @@ body {
 
 .app-layout {
   display: grid;
-  grid-template-columns: 56px 1fr;
+  grid-template-rows: 8% 84% 8%;
   width: 100%;
   height: 100%;
 }
 
-/* ── 左侧导航 ── */
-.edge-bar {
+/* ── 左侧工具条（贴合参考图） ── */
+.tool-rail {
+  height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
-  padding: 20px 0;
-  background: rgba(255, 252, 247, 0.6);
+  justify-content: center;
+  gap: 14px;
+  padding: 14px 6px;
+  background: rgba(255, 252, 247, 0.55);
   border-right: 1px solid rgba(26, 24, 20, 0.06);
+  backdrop-filter: blur(12px);
+  display: flex;
   z-index: 10;
 }
 
-.edge-btn {
-  width: 40px;
-  height: 40px;
-  border: 1px solid transparent;
-  border-radius: 10px;
+.rail-btn {
+  border: none;
   background: transparent;
   cursor: pointer;
-  font-size: 16px;
-  color: var(--ink-muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 4px 8px;
+  color: rgba(26, 24, 20, 0.65);
   transition: all 0.35s var(--ease-ink);
 }
 
-.edge-btn:hover {
-  color: var(--ink-black);
-  background: rgba(201, 169, 98, 0.12);
+.rail-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+  border: 1px solid rgba(26, 24, 20, 0.12);
+  background: rgba(255, 255, 255, 0.42);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.75) inset,
+    0 10px 22px rgba(26, 24, 20, 0.05);
 }
 
-.edge-btn.active {
+.rail-label {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  font-family: var(--font-serif);
+  opacity: 0.8;
+}
+
+.rail-btn:hover .rail-icon {
+  border-color: rgba(201, 169, 98, 0.4);
+  background: rgba(201, 169, 98, 0.1);
+}
+
+.rail-btn.active .rail-icon {
+  border-color: rgba(201, 169, 98, 0.55);
+  box-shadow:
+    0 0 0 1px rgba(201, 169, 98, 0.2),
+    0 10px 22px rgba(26, 24, 20, 0.06);
+}
+
+.rail-btn.active {
   color: var(--gold-dark);
-  background: rgba(201, 169, 98, 0.18);
-  border-color: rgba(201, 169, 98, 0.35);
-  box-shadow: 0 0 0 1px rgba(201, 169, 98, 0.15);
 }
 
-.edge-spacer {
+.rail-spacer {
   flex: 1;
 }
 
 /* ── 画布区 ── */
+.content-grid {
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--rail-width) 1fr var(--panel-width);
+  align-items: stretch;
+  height: 100%;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.tool-rail {
+  grid-column: 1;
+}
+
+.canvas-area {
+  grid-column: 2;
+}
+
+.panel-slot {
+  grid-column: 3;
+}
+
 .canvas-area {
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
-  padding: 56px 360px 48px 24px;
+  min-height: 0;
+  padding: 0;
+}
+
+.canvas-frame {
+  width: 92%;
+  height: 95%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .canvas-wrapper {
   position: relative;
   width: 100%;
   max-width: 100%;
+  height: 100%;
   max-height: 100%;
   aspect-ratio: 16 / 9;
   border-radius: 4px;
@@ -169,21 +232,18 @@ body {
 
 /* ── 顶栏 ── */
 .top-bar {
-  position: fixed;
-  top: 0;
-  left: 56px;
-  right: 0;
+  position: relative;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 14px 28px;
+  padding: 14px 22px;
   z-index: 5;
-  pointer-events: none;
+  /* border-bottom: 1px solid rgba(26, 24, 20, 0.06); */
+  /* background: rgba(255, 252, 247, 0.65); */
+  backdrop-filter: blur(10px);
 }
 
-.top-bar > * {
-  pointer-events: auto;
-}
+.top-bar > * { pointer-events: auto; }
 
 .logo {
   display: flex;
@@ -204,18 +264,18 @@ body {
 
 .logo-seal {
   position: absolute;
-  top: -6px;
-  right: 0;
-  width: 16px;
-  height: 16px;
+  top: -10px;
+  right: -6px;
+  width: 20px;
+  height: 20px;
   object-fit: contain;
   opacity: 0.85;
   filter: drop-shadow(0 1px 1px rgba(26, 24, 20, 0.18));
 }
 
 .logo-mark {
-  width: 34px;
-  height: 34px;
+  width: 50px;
+  height: 50px;
   object-fit: contain;
   flex-shrink: 0;
   filter: drop-shadow(0 1px 2px rgba(26, 24, 20, 0.18));
@@ -245,11 +305,11 @@ body {
 
 /* ── 控制面板 ── */
 .control-panel {
-  position: fixed;
-  top: 52px;
-  right: 16px;
-  width: 300px;
-  max-height: calc(100vh - 100px);
+  position: relative;
+  top: auto;
+  right: auto;
+  width: 100%;
+  max-height: 100%;
   background: var(--panel-bg);
   backdrop-filter: blur(20px);
   border: 1px solid rgba(201, 169, 98, 0.2);
@@ -257,22 +317,23 @@ body {
   box-shadow:
     0 16px 48px rgba(26, 24, 20, 0.1),
     0 0 0 1px rgba(255, 255, 255, 0.5) inset;
-  z-index: 20;
+  z-index: 2;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  opacity: 0;
-  transform: translateX(12px);
-  pointer-events: none;
-  transition:
-    opacity 0.4s var(--ease-ink),
-    transform 0.4s var(--ease-ink);
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
 }
 
-.control-panel.open {
-  opacity: 1;
-  transform: translateX(0);
-  pointer-events: auto;
+.control-panel.open { opacity: 1; }
+
+.panel-slot {
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+  padding: 10px 10px 12px;
+  min-height: 0;
 }
 
 .panel-header {
@@ -668,10 +729,7 @@ body {
 
 /* ── 底栏状态 ── */
 .status-bar {
-  position: fixed;
-  bottom: 0;
-  left: 56px;
-  right: 0;
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -715,7 +773,7 @@ body {
 
 .silent-hint {
   position: absolute;
-  bottom: 20px;
+  bottom: 18px;
   left: 50%;
   transform: translateX(-50%);
   font-family: var(--font-serif);
@@ -745,7 +803,7 @@ body {
   }
 }
 
-.fullscreen .edge-bar,
+.fullscreen .tool-rail,
 .fullscreen .control-panel,
 .fullscreen .top-bar,
 .fullscreen .status-bar {
@@ -754,20 +812,34 @@ body {
   transition: opacity 0.5s var(--ease-ink);
 }
 
-.fullscreen:hover .edge-bar,
+.fullscreen:hover .tool-rail,
 .fullscreen:hover .top-bar {
   opacity: 0.35;
 }
 
 @media (max-width: 900px) {
+  .content-grid {
+    grid-template-columns: 86px 1fr;
+    grid-template-rows: 1fr auto;
+    grid-template-areas:
+      "rail canvas"
+      "rail panel";
+  }
+
+  .tool-rail {
+    grid-area: rail;
+  }
+
   .canvas-area {
-    padding-right: 24px;
+    grid-area: canvas;
+  }
+
+  .panel-slot {
+    grid-area: panel;
   }
 
   .control-panel {
-    width: calc(100% - 32px);
-    right: 16px;
-    left: 72px;
+    border-radius: 14px;
   }
 
   .city-grid {
