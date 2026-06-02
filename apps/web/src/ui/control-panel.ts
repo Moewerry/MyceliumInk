@@ -21,6 +21,7 @@ export interface ControlPanelCallbacks {
   onColonyRebirth: () => void;
   onErosionSpeed: (speed: number) => void;
   onWritePhrase: () => void;
+  onClearCanvas: () => void;
 }
 
 export class ControlPanel {
@@ -91,6 +92,8 @@ export class ControlPanel {
           ${this.slider('pressure', '气压', 980, 1040, 1013)}
           <button class="btn-primary" id="btn-refresh-weather">刷新天气</button>
           <button class="btn-primary" id="btn-write">书写新句</button>
+          <p style="font-size:11px;margin-top:8px;opacity:0.55" id="phrase-layer-hint">层积 0/12 句 · 最早的一句会在写满后自动淡出移除</p>
+          <button class="btn-primary" id="btn-clear-canvas" style="margin-top:8px">清空画布</button>
           <p style="font-size:11px;margin-top:12px;opacity:0.6">虚拟城市</p>
           <div class="city-grid">${cities}</div>
         </div>
@@ -194,6 +197,12 @@ export class ControlPanel {
 
     this.element.querySelector('#btn-write')?.addEventListener('click', () => {
       this.callbacks.onWritePhrase();
+    });
+
+    this.element.querySelector('#btn-clear-canvas')?.addEventListener('click', () => {
+      if (confirm('清空画布将移除所有已书写的句子，确定吗？')) {
+        this.callbacks.onClearCanvas();
+      }
     });
 
     this.element.querySelector('#btn-mic')?.addEventListener('click', () => {
@@ -314,5 +323,12 @@ export class ControlPanel {
   updateWorkAge(age: string): void {
     const el = this.element.querySelector('#work-age');
     if (el) el.textContent = age;
+  }
+
+  updatePhraseLayerHint(count: number, max: number): void {
+    const el = this.element.querySelector('#phrase-layer-hint');
+    if (el) {
+      el.textContent = `层积 ${count}/${max} 句 · 最早的一句会在写满后自动移除`;
+    }
   }
 }

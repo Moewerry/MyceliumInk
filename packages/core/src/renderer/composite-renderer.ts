@@ -2,13 +2,22 @@ import type { ColonySystem } from '../colony/colony-system.js';
 import type { BrushEngine, BrushStroke } from '../brush/brush-engine.js';
 import type { BrushParams } from '../types.js';
 
+/** 一句书法 = 一层沉积（保留落笔时的笔刷参数） */
+export interface PhraseLayer {
+  strokes: BrushStroke[];
+  params: BrushParams;
+  inkPoints: { x: number; y: number }[];
+}
+
+const MAX_PHRASE_LAYERS = 12;
+
 /** 双层合成渲染器（Canvas 2D 书法 + WebGL/Canvas2D 菌落） */
 export class CompositeRenderer {
   private brushCanvas: HTMLCanvasElement;
   private colonyCanvas: HTMLCanvasElement;
   private brushCtx: CanvasRenderingContext2D;
   private colonyCtx: CanvasRenderingContext2D;
-  private strokes: BrushStroke[] = [];
+  private phraseLayers: PhraseLayer[] = [];
   private width = 0;
   private height = 0;
   private webglSupported = false;
@@ -68,19 +77,59 @@ export class CompositeRenderer {
     brushEngine.drawPaperTexture(this.brushCtx, this.width, this.height);
   }
 
-  addStroke(stroke: BrushStroke, brushEngine: BrushEngine, params: BrushParams): void {
-    if (this.width < 1 || this.height < 1) return;
-    this.strokes.push(stroke);
-    if (this.strokes.length > 48) this.strokes.shift();
-    brushEngine.drawStroke(this.brushCtx, stroke, params);
+  /** 添加一整句（层积），超出上限时移除最早的一句并重绘 */
+  addPhraseLayer(
+    strokes: BrushStroke[],
+    params: BrushParams,
+    inkPoints: { x: number; y: number }[],
+    brushEngine: BrushEngine,
+  ): void {
+    if (this.width < 1 || this.height < 1 || strokes.length === 0) return;
+
+    this.phraseLayers.push({
+      strokes,
+      params: { ...params },
+      inkPoints: [...inkPoints],
+    });
+
+    if (this.phraseLayers.length > MAX_PHRASE_LAYERS) {
+      this.phraseLayers.shift();
+    }
+
+    this.redrawPhraseLayers(brushEngine);
   }
 
-  redrawAllStrokes(brushEngine: BrushEngine, params: BrushParams): void {
+  getPhraseLayerCount(): number {
+    return this.phraseLayers.length;
+  }
+
+  getAllInkPoints(): { x: number; y: number }[] {
+    return this.phraseLayers.flatMap((p) => p.inkPoints);
+  }
+
+  /** 清空所有书法层积 */
+  clearPhraseLayers(brushEngine: BrushEngine): void {
+    this.phraseLayers = [];
+    this.clearBrushLayer(brushEngine);
+  }
+
+  redrawPhraseLayers(brushEngine: BrushEngine): void {
     if (this.width < 1 || this.height < 1) return;
     this.clearBrushLayer(brushEngine);
-    for (const s of this.strokes) {
-      brushEngine.drawStroke(this.brushCtx, s, params);
+    for (const layer of this.phraseLayers) {
+      for (const s of layer.strokes) {
+        brushEngine.drawStroke(this.brushCtx, s, layer.params);
+      }
     }
+  }
+
+  /** @deprecated 使用 addPhraseLayer */
+  addStroke(stroke: BrushStroke, brushEngine: BrushEngine, params: BrushParams): void {
+    this.addPhraseLayer([stroke], params, [], brushEngine);
+  }
+
+  redrawAllStrokes(brushEngine: BrushEngine, _params: BrushParams): void {
+    this.redrawPhraseLayers(brushEngine);
   }
 
   renderColony(colony: ColonySystem): void {

@@ -38,6 +38,9 @@ export class MyceliumApp {
 
   private canvasWrapper!: HTMLElement;
   private silentHint!: HTMLElement;
+  /** 竖排书写槽位：每写一句换一列/一行 */
+  private phraseSlot = 0;
+  private inkAttractors: { x: number; y: number }[] = [];
 
   mount(root: HTMLElement): void {
     root.innerHTML = `
@@ -95,6 +98,7 @@ export class MyceliumApp {
       },
       onErosionSpeed: (s) => this.timeline.setSpeed(s),
       onWritePhrase: () => this.writeNextPhrase(),
+      onClearCanvas: () => this.clearCanvas(),
     });
 
     document.body.appendChild(this.panel.element);
@@ -156,9 +160,17 @@ export class MyceliumApp {
     const { data } = this.weatherService.getState();
     const target = mapWeatherToBrush(data);
     this.brushInterpolator.setTarget(target, 800);
+    // 已沉积的旧句保留落笔时的气象笔刷，不随滑块重绘
+  }
+
+  private clearCanvas(): void {
+    this.phraseSlot = 0;
+    this.inkAttractors = [];
+    this.renderer.clearPhraseLayers(this.brushEngine);
     const { width, height } = this.renderer.getDimensions();
-    if (width < 1 || height < 1) return;
-    this.renderer.redrawAllStrokes(this.brushEngine, this.brushInterpolator.get());
+    this.colony.rebirth(width, height);
+    this.colony.setInkAttractors([]);
+    this.panel.updatePhraseLayerHint(0, 12);
   }
 
   private stopAllAudio(): void {
@@ -247,27 +259,39 @@ export class MyceliumApp {
     const phrase = this.brushEngine.pickPhrase();
     const params = this.brushInterpolator.get();
     const { width, height } = this.renderer.getDimensions();
-    const startX = width * 0.65;
-    const startY = height * 0.2;
-    const lineHeight = params.strokeWeight * 28;
+    if (width < 1 || height < 1) return;
 
+    const lineHeight = params.strokeWeight * 28;
+    const columnWidth = params.strokeWeight * 34;
+    const colsPerRow = Math.max(2, Math.floor((width * 0.75) / columnWidth));
+    const row = Math.floor(this.phraseSlot / colsPerRow);
+    const col = this.phraseSlot % colsPerRow;
+
+    // 竖排：从右向左逐列，行满后下移（层积书写）
+    const startX = width * 0.82 - col * columnWidth + (Math.random() - 0.5) * 8;
+    const startY = height * (0.12 + row * 0.28) + (Math.random() - 0.5) * 16;
+    this.phraseSlot++;
+
+    const phrasePoints: { x: number; y: number }[] = [];
+    const strokes: ReturnType<BrushEngine['generateCharStroke']>[] = [];
     for (let i = 0; i < phrase.length; i++) {
-      const stroke = this.brushEngine.generateCharStroke(
-        phrase[i],
-        startX,
-        startY + i * lineHeight,
-        params.strokeWeight * 12,
-        params,
+      const y = startY + i * lineHeight;
+      phrasePoints.push({ x: startX, y });
+      strokes.push(
+        this.brushEngine.generateCharStroke(
+          phrase[i],
+          startX,
+          y,
+          params.strokeWeight * 12,
+          params,
+        ),
       );
-      this.renderer.addStroke(stroke, this.brushEngine, params);
     }
 
-    this.colony.setInkAttractors(
-      Array.from({ length: phrase.length }, (_, i) => ({
-        x: startX,
-        y: startY + i * lineHeight,
-      })),
-    );
+    this.renderer.addPhraseLayer(strokes, params, phrasePoints, this.brushEngine);
+    this.inkAttractors = this.renderer.getAllInkPoints();
+    this.colony.setInkAttractors(this.inkAttractors);
+    this.panel.updatePhraseLayerHint(this.renderer.getPhraseLayerCount(), 12);
   }
 
   private resize(): void {
@@ -287,7 +311,7 @@ export class MyceliumApp {
     this.canvasWrapper.style.height = `${height}px`;
     this.renderer.resize(width, height);
     this.renderer.clearBrushLayer(this.brushEngine);
-    this.renderer.redrawAllStrokes(this.brushEngine, this.brushInterpolator.get());
+    this.renderer.redrawPhraseLayers(this.brushEngine);
   }
 
   private loop(now: number): void {
